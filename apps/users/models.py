@@ -1,6 +1,6 @@
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.auth.models import PermissionsMixin, UserManager
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -20,11 +20,16 @@ class User(AbstractBaseUser, PermissionsMixin):
         _("first name"),
         max_length=40,
         validators=[MinLengthValidator(2)],
+        blank=True,
+        null=True,
     )
+
     last_name = models.CharField(
         _("last name"),
         max_length=40,
         validators=[MinLengthValidator(2)],
+        blank=True,
+        null=True,
     )
 
     email = models.EmailField(
@@ -68,6 +73,7 @@ class Role(models.Model):
     name = models.CharField(
         _("Name"),
         max_length=50,
+        validators=[MinLengthValidator(2)],
         unique=True,
         help_text=_("Unique role identifier (e.g., 'host', 'guest', 'moderator')")
     )
@@ -99,7 +105,14 @@ class Profile(models.Model):
     phone = models.CharField(
         _("Phone number"),
         max_length=20,
-        blank=True
+        blank=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\+\d{7,12}$',
+                message=_("Phone number must start with '+' followed by 7 to 12 digits"),
+                code='invalid_phone'
+            )
+        ]
     )
 
     avatar = models.ImageField(
