@@ -60,8 +60,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = "users"
-        verbose_name = "User"
-        verbose_name_plural = "Users"
+        verbose_name = _("User")
+        verbose_name_plural = _("Users")
 
 
 class Role(models.Model):
@@ -121,7 +121,7 @@ class Profile(models.Model):
         verbose_name=_("Roles")
     )
 
-    # Рейтинги пользователя по трём категориям (TOP/OK/POOR)
+    # Рейтинги пользователя  (TOP/OK/POOR)
     satisfaction_total_score = models.FloatField(
         _("Satisfaction total score"),
         default=0.0,
