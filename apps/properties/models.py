@@ -1,5 +1,5 @@
 from django.db import models
-from django.core.validators import MinLengthValidator
+from django.core.validators import MinLengthValidator, MaxValueValidator
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 
@@ -44,7 +44,7 @@ class RealEstateObject(models.Model):
     )
 
     title = models.CharField(_('Title'), max_length=200)
-    description = models.TextField(_('Description'))
+    description = models.TextField(_('Description'), blank=True)
     property_type = models.CharField(
         _('Property Type'),
         max_length=20,
@@ -61,12 +61,33 @@ class RealEstateObject(models.Model):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
 
+    rooms = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(500)
+        ]
+    )
+    bathrooms = models.PositiveSmallIntegerField(
+        validators=[MaxValueValidator(500)]
+    )
+    max_guests = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(1000)
+        ]
+    )
 
-    rooms = models.IntegerField()
-    bathrooms = models.IntegerField()
-    max_guests = models.IntegerField()
-    area_sqm = models.IntegerField(null=True, blank=True)
-
+    area_sqm = models.PositiveSmallIntegerField(
+        _("Area (m²)"),
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(10000)
+        ]
+    )
 
     has_wifi = models.BooleanField(
         verbose_name=_('Wi-Fi'),
@@ -177,27 +198,33 @@ class RealEstateListing(models.Model):
         choices=[('EUR', 'EUR'), ('USD', 'USD'), ('GBP', 'GBP')]
     )
 
-    minimum_stay = models.IntegerField(
+    minimum_stay = models.PositiveSmallIntegerField(
         verbose_name=_('Minimum Stay'),
         default=1,
-        validators=[MinValueValidator(1)],
-        help_text=_('Minimum number of nights required')
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(365)
+        ],
+        help_text=_('Minimum number of nights required (1-365)')
     )
 
     check_in_time = models.TimeField(
         verbose_name=_('Check-in Time'),
+        max_length=5,
         default='15:00'
     )
 
     check_out_time = models.TimeField(
         verbose_name=_('Check-out Time'),
+        max_length=5,
         default='11:00'
     )
 
-    cancellation_days_before = models.PositiveIntegerField(
+    cancellation_days_before = models.PositiveSmallIntegerField(
         verbose_name=_('Cancellation Days Before Check-in'),
         default=2,
-        help_text=_('Guest can cancel up to this many days before check-in')
+        validators=[MaxValueValidator(365)],
+        help_text=_('Guest can cancel up to this many days before check-in (0-365)')
     )
 
     is_active = models.BooleanField(
