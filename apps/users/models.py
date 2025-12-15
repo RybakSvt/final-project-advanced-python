@@ -134,7 +134,7 @@ class Profile(models.Model):
         verbose_name=_("Roles")
     )
 
-    # Рейтинги пользователя  (TOP/OK/POOR)
+    # Рейтинги пользователя  (TOP/OK/POOR)    обновляются автоматически при добавлении новой оценки в UserRating
     satisfaction_total_score = models.FloatField(
         _("Satisfaction total score"),
         default=0.0,
