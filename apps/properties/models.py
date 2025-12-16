@@ -245,6 +245,12 @@ class RealEstateListing(models.Model):
         help_text=_('Notes from moderator (visible only to staff)')
     )
 
+    view_count = models.PositiveIntegerField(
+        verbose_name=_('View Count'),
+        default=0,
+        help_text=_('Number of times this listing was viewed')
+    )
+
     created_at = models.DateTimeField(
         verbose_name=_('Created At'),
         auto_now_add=True
@@ -261,6 +267,9 @@ class RealEstateListing(models.Model):
         verbose_name = _('Real Estate Listing')
         verbose_name_plural = _('Real Estate Listings')
         ordering = ['-created_at']
+
+
+
 
 
 
