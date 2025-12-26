@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
+from apps.shared.constants import RATING_CATEGORIES, RATING_VALUES
 
 
 class PropertyReview(models.Model):
@@ -92,17 +93,6 @@ class UserRating(models.Model):
     Рейтинг пользователя по категориям (TOP/OK/POOR).
     Используется для satisfaction, friendliness, reliability.
     """
-    RATING_CATEGORIES = [
-        ('satisfaction', _('Satisfaction')),
-        ('friendliness', _('Friendliness')),
-        ('reliability', _('Reliability')),
-    ]
-
-    RATING_VALUES = [
-        ('TOP', _('TOP')),
-        ('OK', _('OK')),
-        ('POOR', _('POOR')),
-    ]
 
     booking = models.ForeignKey(
         'bookings.Booking',

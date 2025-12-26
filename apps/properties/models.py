@@ -1,48 +1,112 @@
 from django.db import models
-from django.core.validators import MinLengthValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from decimal import Decimal
+from apps.shared.constants import (
+    PROPERTY_TYPES,
+    PROPERTY_TYPE_GROUPS,
+    CURRENCY_CHOICES,
+    AMENITY_CATEGORIES
+)
 
 from django.utils.translation import gettext_lazy as _
 
 
+class Address(models.Model):
+    country = models.CharField(_('Country'), max_length=100, default='Germany')
+    city = models.CharField(_('City'), max_length=100)
+    street = models.CharField(_('Street'), max_length=255, blank=True)
+    house_number = models.CharField(_('House Number'), max_length=20, blank=True)
+    postal_code = models.CharField(_('Postal Code'), max_length=20, blank=True)
+    latitude = models.FloatField(_('Latitude'), null=True, blank=True)
+    longitude = models.FloatField(_('Longitude'), null=True, blank=True)
+    is_normalized = models.BooleanField(
+        _('Is Normalized'),
+        default=False,
+        help_text=_('Address has been processed by geocoder')
+    )
+
+
+    class Meta:
+        verbose_name = _('Address')
+        verbose_name_plural = _('Addresses')
+        #unique_together = ['country', 'city', 'street', 'house_number', 'postal_code']
+
+    def __str__(self):
+        return f"{self.street} {self.house_number}, {self.city}, {self.country}"
+
+
+    @property
+    def full_address(self):
+        parts = []
+        if self.street:
+            parts.append(str(self.street))
+        if self.house_number:
+            parts.append(str(self.house_number))
+        if self.city:
+            parts.append(str(self.city))
+        if self.postal_code:
+            parts.append(str(self.postal_code))
+        if self.country:
+            parts.append(str(self.country))
+
+        return ', '.join(parts)
+
+
+class Amenity(models.Model):
+    name = models.CharField(
+        _('Name'),
+        max_length=50,
+        unique=True
+    )
+    category = models.CharField(
+        _('Category'),
+        max_length=20,
+        choices=AMENITY_CATEGORIES,
+        default='essentials'
+    )
+
+    class Meta:
+        ordering = ['category', 'name']
+
+
+class PropertyStats(models.Model):
+    rooms = models.PositiveSmallIntegerField(
+        _('Rooms'),
+        validators=[MinValueValidator(1), MaxValueValidator(500)]
+    )
+    bathrooms = models.PositiveSmallIntegerField(
+        _('Bathrooms'),
+        validators=[MinValueValidator(1), MaxValueValidator(500)]
+    )
+    max_guests = models.PositiveSmallIntegerField(
+        _('Max Guests'),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(500)]
+    )
+    area_sqm = models.PositiveSmallIntegerField(
+        _('Area (m²)'),
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(10000)]
+    )
+
+    class Meta:
+        verbose_name = _('Property Stats')
+        verbose_name_plural = _('Property Stats')
+
+    def __str__(self):
+        return f"{self.rooms} rooms, {self.area_sqm} m²"
+
+
 class RealEstateObject(models.Model):
-
-    PROPERTY_TYPE_GROUPS = {
-        'apartments': ['apartment', 'studio', 'loft', 'duplex', 'penthouse'],
-        'houses': ['house', 'townhouse', 'villa', 'cottage'],
-        'rooms': ['room', 'shared_room']
-    }
-
-
-    AMENITY_CATEGORIES = {
-        'essentials': ['has_wifi', 'has_kitchen', 'has_hot_water'],
-        'comfort': ['has_tv', 'has_ac', 'has_washer'],
-        'outside': ['has_parking', 'has_balcony'],
-        'rules': ['has_pets_allowed', 'has_smoking_allowed'],
-    }
-
-    PROPERTY_TYPES = [
-        ('apartment', _('Apartment')),
-        ('studio', _('Studio')),
-        ('loft', _('Loft')),
-        ('duplex', _('Duplex')),
-        ('penthouse', _('Penthouse')),
-        ('house', _('House')),
-        ('townhouse', _('Townhouse')),
-        ('villa', _('Villa')),
-        ('cottage', _('Cottage')),
-        ('room', _('Private Room')),
-        ('shared_room', _('Shared Room')),
-    ]
-
     host = models.ForeignKey(
         'users.User',
         on_delete=models.CASCADE,
-        related_name='real_estate_objects',           #имя обратной связи от User к его объектам недвижимости
+        related_name='real_estate_objects',
         verbose_name=_('Host')
     )
-
     title = models.CharField(_('Title'), max_length=200)
     description = models.TextField(_('Description'), blank=True)
     property_type = models.CharField(
@@ -51,117 +115,45 @@ class RealEstateObject(models.Model):
         choices=PROPERTY_TYPES
     )
 
-    address = models.CharField(_('Full Address'), max_length=255)
-    street = models.CharField(_('Street'), max_length=255, blank=True)
-    house_number = models.CharField(_('House Number'), max_length=20, blank=True)
-    district = models.CharField(_('District'), max_length=100, blank=True)
-    city = models.CharField(_('City'), max_length=100)
-    country = models.CharField(_('Country'), max_length=100, default='Germany')
-    postal_code = models.CharField(_('Postal_code'), max_length=20, blank=True)
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-
-    rooms = models.PositiveSmallIntegerField(
-        validators=[
-            MinValueValidator(1),
-            MaxValueValidator(500)
-        ]
-    )
-    bathrooms = models.PositiveSmallIntegerField(
-        validators=[MaxValueValidator(500)]
-    )
-    max_guests = models.PositiveSmallIntegerField(
-        null=True,
+    address_raw = models.TextField(
+        _('Raw Address Input'),
         blank=True,
-        validators=[
-            MinValueValidator(1),
-            MaxValueValidator(1000)
-        ]
+        help_text=_('Original address entered by host (before normalization)')
     )
 
-    area_sqm = models.PositiveSmallIntegerField(
-        _("Area (m²)"),
-        null=True,
+    address = models.ForeignKey(  # существующее поле
+        Address,
+        on_delete=models.PROTECT,
+        related_name='properties',
+        verbose_name=_('Normalized Address')
+    )
+
+    stats = models.OneToOneField(
+        PropertyStats,
+        on_delete=models.CASCADE,
+        related_name='real_estate_object',
+        verbose_name=_('Property Stats')
+    )
+    amenities = models.ManyToManyField(
+        Amenity,
         blank=True,
-        validators=[
-            MinValueValidator(1),
-            MaxValueValidator(10000)
-        ]
+        related_name='properties',
+        verbose_name=_('Amenities')
     )
 
-    has_wifi = models.BooleanField(
-        verbose_name=_('Wi-Fi'),
-        default=True,
-        help_text=_('Property has Wi-Fi internet access')
-    )
-    has_kitchen = models.BooleanField(
-        verbose_name=_('Kitchen'),
-        default=True,
-        help_text=_('Property has a kitchen or kitchenette')
-    )
-
-    has_tv = models.BooleanField(
-        verbose_name=_('TV'),
-        default=True,
-        help_text=_('Property has television')
-    )
-
-    has_ac = models.BooleanField(
-        verbose_name=_('Air Conditioning'),
-        default=False,
-        help_text=_('Property has air conditioning')
-    )
-
-    has_washer = models.BooleanField(
-        verbose_name=_('Washing Machine'),
-        default=False,
-        help_text=_('Property has a washing machine')
-    )
-
-    has_parking = models.BooleanField(
-        verbose_name=_('Parking'),
-        default=False,
-        help_text=_('Property has parking space available')
-    )
-    has_balcony = models.BooleanField(
-        verbose_name=_('Balcony/Terrace'),
-        default=False,
-        help_text=_('Property has a balcony or terrace')
-    )
-
-    has_pets_allowed = models.BooleanField(
-        verbose_name=_('Pets Allowed'),
-        default=False,
-        help_text=_('Pets are allowed in the property')
-    )
-    has_smoking_allowed = models.BooleanField(
-        verbose_name=_('Smoking Allowed'),
-        default=False,
-        help_text=_('Smoking is allowed in the property')
-    )
-
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(_('Created At'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('Updated At'), auto_now=True)
 
     def __str__(self):
-        return f"{self.title} in {self.city}"
+        return f"{self.title} in {self.address.city}"
 
     def get_property_group(self):
         """Возвращает группу свойства (apartments/houses/rooms)"""
-        for group_name, types in self.PROPERTY_TYPE_GROUPS.items():
+        from apps.shared.constants import PROPERTY_TYPE_GROUPS
+        for group_name, types in PROPERTY_TYPE_GROUPS.items():
             if self.property_type in types:
                 return group_name
         return self.property_type
-
-    def get_amenities_by_category(self):
-        """Возвращает удобства по категориям"""
-        amenities = {}
-        for category, fields in self.AMENITY_CATEGORIES.items():
-            amenities[category] = {
-                field: getattr(self, field) for field in fields
-            }
-        return amenities
 
     class Meta:
         verbose_name = _('Real Estate Object')
@@ -195,7 +187,7 @@ class RealEstateListing(models.Model):
         verbose_name=_('Currency'),
         max_length=3,
         default='EUR',
-        choices=[('EUR', 'EUR'), ('USD', 'USD'), ('GBP', 'GBP')]
+        choices=CURRENCY_CHOICES
     )
 
     minimum_stay = models.PositiveSmallIntegerField(
