@@ -3,10 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 from django.utils import timezone
-from datetime import date
-
-# Константа для бесконечной даты
-INFINITE_DATE = date(2999, 12, 31)
+from apps.shared.constants import BOOKING_STATUS_CHOICES, CURRENCY_CHOICES, INFINITE_DATE
 
 
 class Availability(models.Model):
@@ -89,12 +86,6 @@ class Booking(models.Model):
     """
     Бронирование (создание, отмена, подтверждение бронирования).
     """
-    STATUS_CHOICES = [
-        ('pending', _('Pending')),
-        ('confirmed', _('Confirmed')),
-        ('cancelled', _('Cancelled')),
-        ('completed', _('Completed')),
-    ]
 
     listing = models.ForeignKey(
         'properties.RealEstateListing',
@@ -131,7 +122,7 @@ class Booking(models.Model):
         verbose_name=_('Currency'),
         max_length=3,
         default='EUR',
-        choices=[('EUR', 'EUR'), ('USD', 'USD'), ('GBP', 'GBP')]
+        choices=CURRENCY_CHOICES
     )
 
     total_price = models.DecimalField(
@@ -145,7 +136,7 @@ class Booking(models.Model):
     status = models.CharField(
         verbose_name=_('Status'),
         max_length=20,
-        choices=STATUS_CHOICES,
+        choices=BOOKING_STATUS_CHOICES,
         default='pending'
     )
 
@@ -171,7 +162,7 @@ class Booking(models.Model):
         verbose_name_plural = _('Bookings')
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['guest', 'status']),
+            models.Index(fields=['guest', 'status']),                # пересмотреть
             models.Index(fields=['listing', 'status']),
         ]
         constraints = [

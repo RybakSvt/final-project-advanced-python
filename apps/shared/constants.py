@@ -23,12 +23,14 @@ PROPERTY_TYPE_GROUPS = {
     'rooms': ['room', 'shared_room']
 }
 
-AMENITY_CATEGORIES = {
-    'essentials': ['has_wifi', 'has_kitchen', 'has_hot_water'],
-    'comfort': ['has_tv', 'has_ac', 'has_washer'],
-    'outside': ['has_parking', 'has_balcony'],
-    'rules': ['has_pets_allowed', 'has_smoking_allowed'],
-}
+AMENITY_CATEGORIES = [
+    ('essentials', 'Essentials'),      # Wi-Fi, кухня
+    ('comfort', 'Comfort'),            # кондиционер, ТВ, стиральная машина
+    ('outside', 'Outside'),            # парковка, балкон, терраса, сад
+    ('luxury', 'Luxury'),              # бассейн, джакузи, сауна
+    ('accessibility', 'Accessibility'),# лифт, доступ для инвалидов
+    ('rules', 'Rules'),                # животные, курение
+]
 
 # ============================================================================
 # BOOKINGS
