@@ -1,25 +1,28 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter, SimpleRouter
 
-from apps.properties.views import RealEstateObjectViewSet
+from apps.properties.views import (
+    RealEstateObjectViewSet,
+    PublicListingViewSet,
+    HostListingViewSet,
+    ListingDetailViewSet,
+)
 
 #from rest_framework.authtoken.views import obtain_auth_token
 #from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-#from library.views.books import BookViewSet
-#from library.views.publishers import PublisherViewSet
-#from library.views.users import UserLoginAPIView, RegisterUser, LogOutUser
-
 #router = SimpleRouter()
 router = DefaultRouter()
 router.register('objects', RealEstateObjectViewSet, basename='real-estate-object')  # /api/v1/objects/
-                                                      # /api/v1/objects/<pk>
+                                                                                           # /api/v1/objects/<pk>
+router.register('listings', PublicListingViewSet, basename='public-listings')       # /api/v1/listings/
+router.register('listing', ListingDetailViewSet, basename='listing-detail')         # /api/v1/listing/<pk>
+router.register('host-listings', HostListingViewSet, basename='host-listings')       # /api/v1/host-listings
+                                                                                            #/api/v1/host-listings/<id>/
+
 
 
 urlpatterns = [
-    # path('books/', include('library.urls.books')),
-#    path('users/', include('library.urls.users')),
-#    path('categories/', include('library.urls.categories')),
 #    path('token-auth/', obtain_auth_token),
 #    path('jwt-auth/', TokenObtainPairView.as_view()),
 #    path('jwt-refresh/', TokenRefreshView.as_view()),
