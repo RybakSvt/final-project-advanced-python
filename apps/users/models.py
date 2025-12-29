@@ -108,8 +108,8 @@ class Profile(models.Model):
         blank=True,
         validators=[
             RegexValidator(
-                regex=r'^\+\d{7,12}$',
-                message=_("Phone number must start with '+' followed by 7 to 12 digits"),
+                regex=r'^\+\d{7,13}$',
+                message=_("Phone number must start with '+' followed by 7 to 13 digits"),
                 code='invalid_phone'
             )
         ]

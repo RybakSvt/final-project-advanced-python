@@ -22,11 +22,11 @@ from django.urls import path, include
 
 #schema_view = get_schema_view(
 #     openapi.Info(
-#         title='Library Swagger',
+#         title='Rent Swagger',
 #         default_version='1.0.0',
 #         description='TEST DESCRIPTION',
 #         terms_of_service='https://policies.google.com/terms?hl=en-US',
-#         contact=openapi.Contact(name='Vladislav', email='test.gmail@gmail.com'),
+#         contact=openapi.Contact(name='Svitlana', email='test.gmail@gmail.com'),
 #         license=openapi.License(name='AWESOME LICENSE')
 #     ),
 #     public=True,
