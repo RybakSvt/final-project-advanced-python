@@ -3,14 +3,13 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 from django.utils import timezone
-from apps.shared.constants import BOOKING_STATUS_CHOICES, CURRENCY_CHOICES, INFINITE_DATE
+from apps.shared.constants import BOOKING_STATUS_CHOICES, CURRENCY_CHOICES, MAX_BOOKING_DATE
 
 
 class Availability(models.Model):
     """
     Доступные периоды для бронирования.
     Host задает периоды, когда объект доступен.
-    end_date = INFINITE_DATE означает бесконечный период.
     """
     listing = models.ForeignKey(
         'properties.RealEstateListing',
@@ -26,8 +25,8 @@ class Availability(models.Model):
 
     end_date = models.DateField(
         verbose_name=_('End Date'),
-        default=INFINITE_DATE,
-        help_text=_('Last available date (defaults to far future for open-ended availability)')
+        default=MAX_BOOKING_DATE,   # ← динамический лимит
+        help_text=_('Last available date (max 2 years from today)')
     )
 
     created_at = models.DateTimeField(
@@ -53,17 +52,20 @@ class Availability(models.Model):
                 condition=models.Q(end_date__gte=models.F('start_date')),
                 name='end_date_after_start_date'
             ),
+            models.CheckConstraint(
+                condition=models.Q(end_date__lte=MAX_BOOKING_DATE),
+                name='end_date_within_max_limit'
+            )
         ]
 
     def __str__(self):
         if self.is_infinite:
-            return f"{self.start_date} and later for {self.listing}"
+            return f"{self.start_date} - {MAX_BOOKING_DATE} (max booking limit)"
         return f"{self.start_date} - {self.end_date} for {self.listing}"
 
     @property
     def is_infinite(self):
-        """Является ли период бесконечным (до 2999-12-31)"""
-        return self.end_date == INFINITE_DATE
+        return self.end_date == MAX_BOOKING_DATE
 
     @property
     def display_end_date(self):
@@ -170,6 +172,10 @@ class Booking(models.Model):
                 condition=models.Q(check_out__gt=models.F('check_in')),
                 name='check_out_after_check_in'
             ),
+            models.CheckConstraint(
+                condition=models.Q(check_out__lte=MAX_BOOKING_DATE),
+                name='booking_within_max_limit'
+            )
         ]
 
     def __str__(self):
@@ -225,18 +231,19 @@ class Booking(models.Model):
 
     def check_availability(self):
         """Проверяет, доступны ли выбранные даты"""
-        if not self.check_in or not self.check_out:
-            return False, "Dates not specified"
+        # 1. Проверка лимита по времени (MAX_BOOKING_DATE)
+        if self.check_out > MAX_BOOKING_DATE:
+            return False, f"Booking cannot be later than {MAX_BOOKING_DATE}"
 
-        # Проверка минимального срока
+        # 2. Проверка минимального срока
         if self.nights_count < self.listing.minimum_stay:
             return False, f"Minimum stay is {self.listing.minimum_stay} nights"
 
-        # Проверка дат (не в прошлом)
+        # 3. Проверка дат (не в прошлом)
         if self.check_in <= timezone.now().date():
             return False, "Check-in date must be in the future"
 
-        # Проверка доступности периода
+        # 4. Проверка доступности периода
         availability = self.listing.availabilities.filter(
             start_date__lte=self.check_in,
             end_date__gte=self.check_out
@@ -244,6 +251,10 @@ class Booking(models.Model):
 
         if not availability:
             return False, "Selected dates are not available"
+
+        # 5. Проверка, что период не превышает MAX_BOOKING_DATE
+        if availability.end_date > MAX_BOOKING_DATE:
+            return False, "Availability period exceeds maximum booking limit"
 
         return True, "Available"
 
@@ -267,6 +278,10 @@ class Booking(models.Model):
                 if not availability:
                     return False, "Dates are no longer available"
 
+                # Проверяем, что период не выходит за MAX_BOOKING_DATE
+                if availability.end_date > MAX_BOOKING_DATE:
+                    return False, "Availability period exceeds maximum booking limit"
+
                 # Разделяем период доступности
                 periods_to_create = []
 
@@ -281,12 +296,14 @@ class Booking(models.Model):
                     )
 
                 # Период ПОСЛЕ брони (если бронь не заканчивается в end_date)
-                if availability.end_date > self.check_out:
+                # Учитываем MAX_BOOKING_DATE
+                effective_end_date = min(availability.end_date, MAX_BOOKING_DATE)
+                if effective_end_date > self.check_out:
                     periods_to_create.append(
                         Availability(
                             listing=self.listing,
                             start_date=self.check_out + timezone.timedelta(days=1),
-                            end_date=availability.end_date
+                            end_date=effective_end_date
                         )
                     )
 
@@ -328,7 +345,7 @@ class Booking(models.Model):
                 Availability.objects.create(
                     listing=self.listing,
                     start_date=self.check_in,
-                    end_date=self.check_out - timezone.timedelta(days=1)
+                    end_date=self.check_out
                 )
 
         return True, "Booking cancelled"

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 # ============================================================================
 # PROPERTIES
@@ -35,7 +35,10 @@ AMENITY_CATEGORIES = [
 # ============================================================================
 # BOOKINGS
 # ============================================================================
-INFINITE_DATE = date(2999, 12, 31)
+def get_max_booking_date():
+    return date.today() + timedelta(days=365*2)  # 2 года вперёд
+
+MAX_BOOKING_DATE = get_max_booking_date()
 
 BOOKING_STATUS_CHOICES = [
     ('pending', 'Pending'),
