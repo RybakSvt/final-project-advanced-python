@@ -9,7 +9,7 @@ class AvailabilityAdmin(admin.ModelAdmin):
     search_fields = ['listing__real_estate_object__title']
 
     def end_date_display(self, obj):
-        return "∞" if obj.is_infinite else obj.end_date
+        return obj.end_date
 
     end_date_display.short_description = 'End Date'
 

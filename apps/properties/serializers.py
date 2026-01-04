@@ -4,6 +4,7 @@ from .models import (
     Address, PropertyStats, Amenity
 )
 from apps.reviews.serializers import ReviewPreviewSerializer
+from django.utils import timezone
 
 
 # ---------- Вспомогательные сериализаторы ----------
@@ -170,6 +171,8 @@ class ListingListSerializer(serializers.ModelSerializer):
     image_urls = serializers.SerializerMethodField()
 
     # Поля для хоста (скрыты в публичном API)
+    bookings_count = serializers.SerializerMethodField()
+    next_booking_date = serializers.SerializerMethodField()
     is_active = serializers.BooleanField()
     is_approved = serializers.BooleanField()
     view_count = serializers.IntegerField()
@@ -188,6 +191,8 @@ class ListingListSerializer(serializers.ModelSerializer):
             'price_per_night',
             'currency',
             'image_urls',
+            'bookings_count',   # видит только хост
+            'next_booking_date',  # видит только хост
             'is_active',  # видит только хост
             'is_approved',  # видит только хост
             'view_count',  # видит только хост
@@ -206,6 +211,21 @@ class ListingListSerializer(serializers.ModelSerializer):
         # TODO: когда будут фото — вернуть список URL
         return []  # заглушка
 
+
+    def get_bookings_count(self, obj):
+        # Количество активных бронирований (pending + confirmed)
+        return obj.bookings.filter(status__in=['pending', 'confirmed']).count()
+
+
+    def get_next_booking_date(self, obj):
+        # Ближайшая бронь
+        next_booking = obj.bookings.filter(
+            status__in=['pending', 'confirmed'],
+            check_in__gte=timezone.now().date()
+        ).order_by('check_in').first()
+        return next_booking.check_in if next_booking else None
+
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         request = self.context.get('request')
@@ -219,11 +239,13 @@ class ListingListSerializer(serializers.ModelSerializer):
 
         if not is_host:
             # Скрываем поля хоста для не-владельцев
-            data.pop('is_active', None)
-            data.pop('is_approved', None)
-            data.pop('view_count', None)
+            hidden_fields = ['is_active', 'is_approved', 'view_count',
+                             'bookings_count', 'next_booking_date']
+            for field in hidden_fields:
+                data.pop(field, None)
 
         return data
+
 
 
 class ListingReadSerializer(serializers.ModelSerializer):
@@ -336,6 +358,8 @@ class ListingHostDetailSerializer(ListingReadSerializer):
     is_approved = serializers.BooleanField()
     view_count = serializers.IntegerField()
     moderation_notes = serializers.CharField(read_only=True)
+    bookings_count = serializers.SerializerMethodField()
+    next_booking_date = serializers.SerializerMethodField()
 
     # Фото - после создания модели ListingImage:
     images = serializers.SerializerMethodField()
@@ -346,8 +370,21 @@ class ListingHostDetailSerializer(ListingReadSerializer):
             'is_approved',
             'view_count',
             'moderation_notes',
-            'images'
+            'bookings_count',
+            'next_booking_date',
+            'images',
         ]
+
+    def get_bookings_count(self, obj):
+        return obj.bookings.filter(status__in=['pending', 'confirmed']).count()
+
+    def get_next_booking_date(self, obj):
+        next_booking = obj.bookings.filter(
+            status__in=['pending', 'confirmed'],
+            check_in__gte=timezone.now().date()
+        ).order_by('check_in').first()
+        return next_booking.check_in if next_booking else None
+
 
     def get_images(self, obj):
         """Возвращает список фото объявления"""

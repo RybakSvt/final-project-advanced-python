@@ -1,5 +1,5 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter, SimpleRouter
+from rest_framework.routers import DefaultRouter
 
 from apps.properties.views import (
     RealEstateObjectViewSet,
@@ -8,10 +8,16 @@ from apps.properties.views import (
     ListingDetailViewSet,
 )
 
+from apps.bookings.views import (
+    BookingViewSet,
+    HostBookingViewSet,
+    CalendarViewSet,
+    AvailabilityViewSet,
+)
+
 #from rest_framework.authtoken.views import obtain_auth_token
 #from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-#router = SimpleRouter()
 router = DefaultRouter()
 router.register('objects', RealEstateObjectViewSet, basename='real-estate-object')  # /api/v1/objects/
                                                                                            # /api/v1/objects/<pk>
@@ -19,6 +25,11 @@ router.register('listings', PublicListingViewSet, basename='public-listings')   
 router.register('listing', ListingDetailViewSet, basename='listing-detail')         # /api/v1/listing/<pk>
 router.register('host-listings', HostListingViewSet, basename='host-listings')       # /api/v1/host-listings
                                                                                             #/api/v1/host-listings/<id>/
+router.register('bookings', BookingViewSet, basename='bookings')
+router.register('host-bookings', HostBookingViewSet, basename='host-bookings')
+router.register('availability', AvailabilityViewSet, basename='availability')
+
+calendar_list = CalendarViewSet.as_view({'get': 'list'})
 
 
 
@@ -31,4 +42,5 @@ urlpatterns = [
     # path('auth/register/', RegisterUser.as_view()),
     # path('auth/login/', UserLoginAPIView.as_view()),
     # path('auth/logout/', LogOutUser.as_view()),
+    path('calendar/<int:listing_id>/', calendar_list, name='calendar'),
 ] + router.urls
