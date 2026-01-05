@@ -15,8 +15,15 @@ from apps.bookings.views import (
     AvailabilityViewSet,
 )
 
-#from rest_framework.authtoken.views import obtain_auth_token
-#from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from apps.users.views import (
+    RegisterView,
+    LoginView,
+    LogoutView,
+    UserProfileView,
+    BecomeHostView
+)
+
+from rest_framework_simplejwt.views import TokenRefreshView
 
 router = DefaultRouter()
 router.register('objects', RealEstateObjectViewSet, basename='real-estate-object')  # /api/v1/objects/
@@ -32,15 +39,13 @@ router.register('availability', AvailabilityViewSet, basename='availability')
 calendar_list = CalendarViewSet.as_view({'get': 'list'})
 
 
-
 urlpatterns = [
-#    path('token-auth/', obtain_auth_token),
-#    path('jwt-auth/', TokenObtainPairView.as_view()),
-#    path('jwt-refresh/', TokenRefreshView.as_view()),
+    path('auth/register/', RegisterView.as_view(), name='register'),
+    path('auth/login/', LoginView.as_view(), name='login'),
+    path('auth/logout/', LogoutView.as_view(), name='logout'),
+    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/profile/', UserProfileView.as_view(), name='profile'),
+    path('auth/become-host/', BecomeHostView.as_view(), name='become-host'),
 
-    # login \ logout
-    # path('auth/register/', RegisterUser.as_view()),
-    # path('auth/login/', UserLoginAPIView.as_view()),
-    # path('auth/logout/', LogOutUser.as_view()),
     path('calendar/<int:listing_id>/', calendar_list, name='calendar'),
 ] + router.urls
