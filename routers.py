@@ -23,7 +23,10 @@ from apps.users.views import (
     BecomeHostView
 )
 
+from apps.search.views import SearchViewSet
+
 from rest_framework_simplejwt.views import TokenRefreshView
+
 
 router = DefaultRouter()
 router.register('objects', RealEstateObjectViewSet, basename='real-estate-object')  # /api/v1/objects/
@@ -35,6 +38,8 @@ router.register('host-listings', HostListingViewSet, basename='host-listings')  
 router.register('bookings', BookingViewSet, basename='bookings')
 router.register('host-bookings', HostBookingViewSet, basename='host-bookings')
 router.register('availability', AvailabilityViewSet, basename='availability')
+
+router.register('search', SearchViewSet, basename='search')
 
 calendar_list = CalendarViewSet.as_view({'get': 'list'})
 
