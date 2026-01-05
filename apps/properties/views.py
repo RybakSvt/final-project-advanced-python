@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from django.db.models import Avg, Count
 
 
 from .models import RealEstateObject, RealEstateListing
@@ -15,6 +16,28 @@ from .serializers import (
 )
 from django_filters.rest_framework import DjangoFilterBackend
 from ..shared.permissions import IsHost
+
+
+#          === БАЗОВЫЙ КЛАСС ===
+class BaseListingViewSet(viewsets.ReadOnlyModelViewSet):
+    """Базовый ViewSet для объявлений с общим queryset."""
+
+    def get_base_queryset(self):
+        queryset = RealEstateListing.objects.filter(
+            is_active=True,
+            is_approved=True
+        ).select_related(
+            'real_estate_object__address',
+            'real_estate_object__stats',
+            'real_estate_object__host'
+        ).prefetch_related(
+            'real_estate_object__amenities',
+            'reviews'
+        ).annotate(
+            avg_rating=Avg('reviews__rating'),
+            total_reviews=Count('reviews')
+        )
+        return queryset
 
 
 class RealEstateObjectViewSet(viewsets.ModelViewSet):
@@ -70,7 +93,7 @@ class PublicListingViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class ListingDetailViewSet(viewsets.ReadOnlyModelViewSet):
+class ListingDetailViewSet(BaseListingViewSet):
     """
     Детальный просмотр объявления (публичный для всех)
     GET /api/v1/listing/{id}/
@@ -79,34 +102,19 @@ class ListingDetailViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        # Все видят только активные и одобренные объявления
-        queryset = RealEstateListing.objects.filter(
-            is_active=True,
-            is_approved=True
-        ).select_related(
-            'real_estate_object__address',
-            'real_estate_object__stats',
-            'real_estate_object__host'
-        ).prefetch_related(
-            'real_estate_object__amenities',
-            'reviews'  # для recent_reviews
-        )
+        return self.get_base_queryset()
 
-        # аннотация рейтинга и количества отзывов
-        from django.db.models import Avg, Count
-        queryset = queryset.annotate(
-            avg_rating=Avg('reviews__rating'),
-            total_reviews=Count('reviews')
-        )
-
-        return queryset
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if request.user.is_authenticated:
+            from apps.search.models import ViewHistory
+            ViewHistory.objects.create(user=request.user, listing=instance)
+        return super().retrieve(request, *args, **kwargs)
 
 
 class HostListingViewSet(viewsets.ModelViewSet):
     """Управление объявлениями для хоста"""
-    #queryset = RealEstateListing.objects.all()
     permission_classes = [permissions.IsAuthenticated, IsHost]
-    #permission_classes = []
 
 
     def get_serializer_class(self):

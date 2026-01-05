@@ -81,7 +81,7 @@ class RealEstateObjectWriteSerializer(serializers.ModelSerializer):
             'title', 'description', 'property_type',
             'address_raw', 'address', 'stats', 'amenities'
         ]
-        # host будет устанавливаться автоматически из request.user
+        # host устанавливается автоматически из request.user
 
     def create(self, validated_data):
         # Извлекаем данные
