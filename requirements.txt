@@ -5,10 +5,13 @@ Django==6.0
 django-environ==0.12.0
 django-filter==25.2
 djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
 factory_boy==3.3.3
 Faker==38.2.0
 mysqlclient==2.2.7
 pillow==12.0.0
 pycparser==2.23
+PyJWT==2.10.1
+rest-framework-simplejwt==0.0.2
 sqlparse==0.5.4
 tzdata==2025.2

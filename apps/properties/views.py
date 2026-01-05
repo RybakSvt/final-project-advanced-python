@@ -26,8 +26,13 @@ class RealEstateObjectViewSet(viewsets.ModelViewSet):
     #http_method_names = ['get', 'post', 'put', 'patch', 'delete']
 
     def get_queryset(self):
-        return RealEstateObject.objects.filter(host=self.request.user)
-
+        return RealEstateObject.objects.filter(
+            host=self.request.user
+        ).select_related(
+            'host__profile'
+        ).prefetch_related(
+            'amenities'
+        )
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -115,11 +120,12 @@ class HostListingViewSet(viewsets.ModelViewSet):
         return RealEstateListing.objects.filter(
             real_estate_object__host=self.request.user
         ).select_related(
+            'real_estate_object__host__profile',  # ← ДОБАВИТЬ для IsHost
             'real_estate_object__address',
             'real_estate_object__stats'
         ).prefetch_related(
             'real_estate_object__amenities',
-            'reviews'
+            'reviews',
             # '.images' после добавления
         )
 

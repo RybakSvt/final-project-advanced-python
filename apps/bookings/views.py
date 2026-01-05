@@ -86,13 +86,14 @@ class HostBookingViewSet(viewsets.ModelViewSet):
         return BookingListSerializer
 
     def get_queryset(self):
-        queryset = Booking.objects.filter(
+        return Booking.objects.filter(
             listing__real_estate_object__host=self.request.user
         ).select_related(
+            'listing__real_estate_object__host__profile',
             'listing__real_estate_object__address',
-            'listing__real_estate_object__stats',
-            'guest'
+            'guest__profile'
         ).prefetch_related('listing__real_estate_object__amenities')
+
 
         listing_id = self.request.query_params.get('listing')
         if listing_id:
@@ -139,7 +140,10 @@ class AvailabilityViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Availability.objects.filter(
             listing__real_estate_object__host=self.request.user
+        ).select_related(
+            'listing__real_estate_object__host__profile'  # ← для IsHost
         )
+
 
     def perform_create(self, serializer):
         # Проверяем, что объявление принадлежит хосту
