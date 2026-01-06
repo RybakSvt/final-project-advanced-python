@@ -25,6 +25,9 @@ from apps.users.views import (
 
 from apps.search.views import SearchViewSet
 
+from apps.reviews.urls import urlpatterns as reviews_urls
+#from apps.search.urls import urlpatterns as search_urls
+
 from rest_framework_simplejwt.views import TokenRefreshView
 
 
@@ -42,6 +45,7 @@ router.register('availability', AvailabilityViewSet, basename='availability')
 router.register('search', SearchViewSet, basename='search')
 
 calendar_list = CalendarViewSet.as_view({'get': 'list'})
+availability_range = CalendarViewSet.as_view({'get': 'availability_range'})
 
 
 urlpatterns = [
@@ -53,4 +57,8 @@ urlpatterns = [
     path('auth/become-host/', BecomeHostView.as_view(), name='become-host'),
 
     path('calendar/<int:listing_id>/', calendar_list, name='calendar'),
+    path('calendar/<int:listing_id>/availability_range/', availability_range, name='calendar-availability'),
+
+
+    path('reviews/', include(reviews_urls)),
 ] + router.urls

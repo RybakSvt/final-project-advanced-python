@@ -200,12 +200,11 @@ class ListingListSerializer(serializers.ModelSerializer):
         ]
 
     def get_rating_avg(self, obj):
-        # TODO: рассчитать средний рейтинг из PropertyReview
-        return 4.5  # заглушка
+        # Используем аннотацию из queryset
+        return float(getattr(obj, 'avg_rating', 0) or 0)
 
     def get_reviews_count(self, obj):
-        # TODO: количество отзывов
-        return 12  # заглушка
+        return getattr(obj, 'total_reviews', 0)
 
     def get_image_urls(self, obj):
         # TODO: когда будут фото — вернуть список URL
@@ -311,12 +310,10 @@ class ListingReadSerializer(serializers.ModelSerializer):
         ]
 
     def get_rating_avg(self, obj):
-        # TODO: средний рейтинг из PropertyReview
-        return 4.5
+        return float(getattr(obj, 'avg_rating', 0) or 0)
 
     def get_reviews_count(self, obj):
-        # TODO: количество отзывов
-        return 12
+        return getattr(obj, 'total_reviews', 0)
 
     def get_recent_reviews(self, obj):
         reviews = obj.reviews.filter(is_approved=True).order_by('-created_at')[:4]

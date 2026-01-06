@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -16,6 +17,7 @@ from .serializers import (
     AvailabilitySerializer,
 )
 from apps.shared.permissions import IsHost
+
 
 
 
@@ -163,6 +165,15 @@ class CalendarViewSet(viewsets.ViewSet):
     """
     permission_classes = [permissions.AllowAny]
 
+    def get_listing(self, listing_id):
+        """Вспомогательный метод для получения listing"""
+        return get_object_or_404(
+            RealEstateListing,
+            id=listing_id,
+            is_active=True,
+            is_approved=True
+        )
+
     def list(self, request, listing_id=None):
         # 1. Проверяем существование объявления
         try:
@@ -250,8 +261,13 @@ class CalendarViewSet(viewsets.ViewSet):
             )
 
             # Определяем статус
-            if is_booked:
+            if current_date < timezone.now().date():
+                status = 'unavailable'
+            elif is_booked:
                 status = 'booked'
+
+            # if is_booked:
+            #     status = 'booked'
             elif not is_available:
                 status = 'unavailable'
             else:

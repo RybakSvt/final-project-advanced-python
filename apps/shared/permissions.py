@@ -58,3 +58,15 @@ class IsHostOrReadOnly(permissions.BasePermission):
             return getattr(obj.listing.real_estate_object, 'host_id', None) == request.user.id
 
         return False
+
+
+class IsReviewParticipant(permissions.BasePermission):
+    """Разрешение для участников отзыва/рейтинга"""
+    def has_object_permission(self, request, view, obj):
+        # Для PropertyReview
+        if hasattr(obj, 'guest'):
+            return request.user in [obj.guest, obj.listing.real_estate_object.host]
+        # Для UserRating
+        elif hasattr(obj, 'rating_user'):
+            return request.user in [obj.rating_user, obj.rated_user]
+        return False

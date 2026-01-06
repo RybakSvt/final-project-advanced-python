@@ -1,12 +1,21 @@
 from django.contrib import admin
-from .models import UserRating, PropertyReview
+from .models import PropertyReview, UserRating
 
 @admin.register(UserRating)
 class UserRatingAdmin(admin.ModelAdmin):
-    list_display = ('id', 'rating_user', 'rated_user', 'category', 'rating', 'created_at')
-    list_filter = ('category', 'rating', 'created_at')
-    search_fields = ('rating_user__username', 'rated_user__username', 'comment')
-    readonly_fields = ('created_at',)
+    list_display = [
+        'id', 'booking', 'rating_user', 'rated_user',
+        'satisfaction', 'friendliness', 'reliability', 'created_at'
+    ]
+    list_filter = [
+        'satisfaction', 'friendliness', 'reliability',
+        'created_at'
+    ]
+    search_fields = [
+        'rating_user__username', 'rated_user__username',
+        'booking__id', 'comment'
+    ]
+    raw_id_fields = ['booking', 'rating_user', 'rated_user']
 
 @admin.register(PropertyReview)
 class PropertyReviewAdmin(admin.ModelAdmin):
