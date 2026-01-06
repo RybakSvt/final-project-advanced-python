@@ -213,6 +213,12 @@ class Profile(models.Model):
         help_text=_("Number of POOR ratings for reliability")
     )
 
+    ratings_given_count = models.IntegerField(
+        _("Ratings given count"),
+        default=0,
+        help_text=_("Number of ratings given to other users")
+    )
+
 
     created_at = models.DateTimeField(
         _("Created at"),

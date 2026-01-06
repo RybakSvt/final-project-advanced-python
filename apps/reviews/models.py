@@ -79,35 +79,32 @@ class PropertyReview(models.Model):
     def __str__(self):
         return f"Review #{self.id}: {self.rating} for {self.listing}"
 
+
     def save(self, *args, **kwargs):
-        """Автоматически устанавливаем guest и listing из booking"""
-        if self.booking and not self.guest:
-            self.guest = self.booking.guest
-        if self.booking and not self.listing:
-            self.listing = self.booking.listing
+        # Автоматически устанавливаем guest и listing из booking
+        if self.booking_id and not self.guest_id:
+            self.guest = self.booking.guest  # ← может падать здесь
+        if self.booking_id and not self.listing_id:
+            self.listing = self.booking.listing  # ← и здесь
+
+        # Проверка, что booking существует и имеет связи
+        if not hasattr(self, 'booking') or self.booking is None:
+            raise ValueError("Cannot save PropertyReview without booking")
+
         super().save(*args, **kwargs)
 
 
 class UserRating(models.Model):
     """
-    Рейтинг пользователя по категориям (TOP/OK/POOR).
-    Используется для satisfaction, friendliness, reliability.
+    Рейтинг пользователя по трём критериям за одно бронирование.
+    Одна запись содержит все три оценки.
     """
-
     booking = models.ForeignKey(
         'bookings.Booking',
         on_delete=models.CASCADE,
         related_name='user_ratings',
         verbose_name=_('Booking'),
         help_text=_('Booking this rating is for')
-    )
-
-    rated_user = models.ForeignKey(
-        'users.User',
-        on_delete=models.CASCADE,
-        related_name='received_ratings',
-        verbose_name=_('Rated User'),
-        help_text=_('User being rated')
     )
 
     rating_user = models.ForeignKey(
@@ -118,18 +115,37 @@ class UserRating(models.Model):
         help_text=_('User giving the rating')
     )
 
-    category = models.CharField(
-        verbose_name=_('Category'),
-        max_length=20,
-        choices=RATING_CATEGORIES,
-        help_text=_('Rating category')
+    rated_user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='received_ratings',
+        verbose_name=_('Rated User'),
+        help_text=_('User being rated')
     )
 
-    rating = models.CharField(
-        verbose_name=_('Rating'),
+    # Три оценки вместо одной категории
+    satisfaction = models.CharField(
+        verbose_name=_('Satisfaction'),
         max_length=10,
         choices=RATING_VALUES,
-        help_text=_('Rating value (TOP/OK/POOR)')
+        default='OK',
+        help_text=_('Satisfaction rating (TOP/OK/POOR)')
+    )
+
+    friendliness = models.CharField(
+        verbose_name=_('Friendliness'),
+        max_length=10,
+        choices=RATING_VALUES,
+        default='OK',
+        help_text=_('Friendliness rating (TOP/OK/POOR)')
+    )
+
+    reliability = models.CharField(
+        verbose_name=_('Reliability'),
+        max_length=10,
+        choices=RATING_VALUES,
+        default='OK',
+        help_text=_('Reliability rating (TOP/OK/POOR)')
     )
 
     comment = models.TextField(
@@ -147,21 +163,31 @@ class UserRating(models.Model):
         verbose_name = _('User Rating')
         verbose_name_plural = _('User Ratings')
         ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['rated_user', 'category']),
-        ]
         constraints = [
             models.UniqueConstraint(
-                fields=['rated_user', 'rating_user', 'category', 'booking'],
-                name='unique_rating_per_category_booking'
+                fields=['booking', 'rating_user', 'rated_user'],
+                name='unique_rating_per_booking_pair'
             ),
         ]
 
     def __str__(self):
-        return f"{self.rating_user} -> {self.rated_user}: {self.category} - {self.rating}"
+        return f"{self.rating_user} -> {self.rated_user} (S:{self.satisfaction}, F:{self.friendliness}, R:{self.reliability})"
+
+    def save(self, *args, **kwargs):
+        """Автоматически определяет rated_user если не задан"""
+        if not self.rated_user_id and self.booking:
+            if self.rating_user == self.booking.guest:
+                self.rated_user = self.booking.listing.real_estate_object.host
+            else:
+                self.rated_user = self.booking.guest
+        super().save(*args, **kwargs)
 
     @property
-    def score_value(self):
-        """Преобразует TOP/OK/POOR в числовое значение"""
-        scores = {'TOP': 100, 'OK': 50, 'POOR': 0}
-        return scores.get(self.rating, 0)
+    def scores(self):
+        """Возвращает словарь с числовыми значениями оценок"""
+        score_map = {'TOP': 100, 'OK': 50, 'POOR': 0}
+        return {
+            'satisfaction': score_map.get(self.satisfaction, 0),
+            'friendliness': score_map.get(self.friendliness, 0),
+            'reliability': score_map.get(self.reliability, 0),
+        }
